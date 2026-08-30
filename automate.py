@@ -1,6 +1,7 @@
 import os
 import json
 import base64
+import traceback
 from io import BytesIO
 from datetime import datetime, timedelta
 
@@ -418,11 +419,11 @@ async def handle_text(
         await update.message.reply_text(message, parse_mode="Markdown")
 
     except Exception as e:
-
-        print("ERROR:", repr(e))
-
+        tb = traceback.format_exc()
+        print("ERROR:", tb)
+        short = tb[-800:]  # last 800 chars fits in Telegram
         await update.message.reply_text(
-            f"❌ Error (text): `{repr(e)}`",
+            f"❌ Error (text):\n```\n{short}\n```",
             parse_mode="Markdown"
         )
 
@@ -487,11 +488,11 @@ async def handle_image(
         await update.message.reply_text(message, parse_mode="Markdown")
 
     except Exception as e:
-
-        print("ERROR:", repr(e))
-
+        tb = traceback.format_exc()
+        print("ERROR:", tb)
+        short = tb[-800:]
         await update.message.reply_text(
-            f"❌ Error (image): `{repr(e)}`",
+            f"❌ Error (image):\n```\n{short}\n```",
             parse_mode="Markdown"
         )
 
@@ -547,11 +548,11 @@ async def handle_document(
         await update.message.reply_text(message, parse_mode="Markdown")
 
     except Exception as e:
-
-        print("ERROR:", repr(e))
-
+        tb = traceback.format_exc()
+        print("ERROR:", tb)
+        short = tb[-800:]
         await update.message.reply_text(
-            f"❌ Error (doc): `{repr(e)}`",
+            f"❌ Error (doc):\n```\n{short}\n```",
             parse_mode="Markdown"
         )
 
