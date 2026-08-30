@@ -422,7 +422,8 @@ async def handle_text(
         print("ERROR:", repr(e))
 
         await update.message.reply_text(
-            "❌ Something went wrong while extracting the information."
+            f"❌ Error (text): `{repr(e)}`",
+            parse_mode="Markdown"
         )
 
 
@@ -490,7 +491,8 @@ async def handle_image(
         print("ERROR:", repr(e))
 
         await update.message.reply_text(
-            "❌ Something went wrong while reading the image."
+            f"❌ Error (image): `{repr(e)}`",
+            parse_mode="Markdown"
         )
 
 
@@ -549,7 +551,8 @@ async def handle_document(
         print("ERROR:", repr(e))
 
         await update.message.reply_text(
-            "❌ Something went wrong while reading the image file."
+            f"❌ Error (doc): `{repr(e)}`",
+            parse_mode="Markdown"
         )
 
 
