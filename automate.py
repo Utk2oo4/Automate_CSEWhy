@@ -610,15 +610,47 @@ def main():
     print("🤖 Telegram bot is running...")
 
     if render_url:
-        # --- Hosted on Render: use webhook ---
+        # --- Hosted on Render: custom aiohttp server ---
+        # PTB's run_webhook() only serves /{token} → health/cron routes return 404.
+        # We build the aiohttp app manually so /health and / also work.
+        import asyncio
+        from aiohttp import web
+        from telegram import Update
+
         webhook_url = f"{render_url}/{TELEGRAM_BOT_TOKEN}"
         print(f"🌐 Webhook mode: {webhook_url}")
-        application.run_webhook(
-            listen="0.0.0.0",
-            port=port,
-            url_path=TELEGRAM_BOT_TOKEN,
-            webhook_url=webhook_url,
-        )
+
+        async def health_handler(request):
+            return web.json_response({"status": "ok", "service": "telegram-bot"})
+
+        async def webhook_handler(request):
+            """Receive Telegram update and pass it to PTB."""
+            data = await request.json()
+            update = Update.de_json(data, application.bot)
+            await application.process_update(update)
+            return web.Response(text="ok")
+
+        async def run():
+            aio_app = web.Application()
+            aio_app.router.add_get("/", health_handler)
+            aio_app.router.add_get("/health", health_handler)
+            aio_app.router.add_post(f"/{TELEGRAM_BOT_TOKEN}", webhook_handler)
+
+            async with application:
+                await application.start()
+                await application.bot.set_webhook(url=webhook_url)
+
+                runner = web.AppRunner(aio_app)
+                await runner.setup()
+                site = web.TCPSite(runner, "0.0.0.0", port)
+                await site.start()
+                print(f"✅ Server listening on port {port}")
+
+                # Run forever
+                await asyncio.Event().wait()
+
+        asyncio.run(run())
+
     else:
         # --- Local development: use polling ---
         print("🔄 Polling mode (local)")
