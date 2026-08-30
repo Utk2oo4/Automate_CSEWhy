@@ -251,7 +251,7 @@ IMPORTANT RULES:
 def extract_from_text(text: str):
 
     response = client.models.generate_content(
-        model="gemini-3.5-flash-lite",
+        model="gemini-2.0-flash",
 
         contents=[
             EXTRACTION_PROMPT,
@@ -289,7 +289,7 @@ def extract_from_image(image_bytes: bytes, mime_type: str, caption: str = None):
         contents.append(f"\nCaption from the message: {caption}")
 
     response = client.models.generate_content(
-        model="gemini-3.5-flash-lite",
+        model="gemini-2.0-flash",
 
         contents=contents,
 
