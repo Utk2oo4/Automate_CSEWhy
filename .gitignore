@@ -1,0 +1,18 @@
+# Secrets - never commit these
+.env
+token.json
+credentials.json
+*.json
+
+# Keep these specific JSON files safe
+!render.yaml
+
+# Virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
