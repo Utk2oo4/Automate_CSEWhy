@@ -15,6 +15,7 @@ from google.auth.transport.requests import Request
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
 ]
 
 CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), "credentials.json")

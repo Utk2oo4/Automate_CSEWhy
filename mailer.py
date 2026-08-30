@@ -1,10 +1,15 @@
 import os
-import smtplib
+import base64
 import difflib
-import uuid
+import json
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import make_msgid
+
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from google.auth.transport.requests import Request
 
 # --------------------------------------------------
 # EMAIL TEMPLATES
@@ -66,6 +71,19 @@ Team CSEWhy"""
 
 
 # --------------------------------------------------
+# SCOPES (must include Gmail send)
+# --------------------------------------------------
+
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive.readonly",
+    "https://www.googleapis.com/auth/gmail.send",
+]
+
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), "token.json")
+
+
+# --------------------------------------------------
 # FIND TEMPLATE BY BATCH NAME (fuzzy match)
 # --------------------------------------------------
 
@@ -76,7 +94,6 @@ def find_template(batch_name: str) -> dict | None:
 
     batch_lower = batch_name.lower()
 
-    # Collect all keywords with their template keys
     all_keywords = []
     keyword_to_template = {}
     for template_key, template in TEMPLATES.items():
@@ -92,22 +109,38 @@ def find_template(batch_name: str) -> dict | None:
 
 
 # --------------------------------------------------
-# SEND EMAIL
+# GET GMAIL CREDENTIALS
+# --------------------------------------------------
+
+def _get_creds() -> Credentials:
+    """Load OAuth creds from env var (Render) or token.json (local)."""
+    creds = None
+
+    token_b64 = os.environ.get("GOOGLE_TOKEN_B64")
+    if token_b64:
+        token_data = json.loads(base64.b64decode(token_b64).decode("utf-8"))
+        creds = Credentials.from_authorized_user_info(token_data, SCOPES)
+    elif os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+
+    return creds
+
+
+# --------------------------------------------------
+# SEND EMAIL via Gmail API (HTTPS — works on Render)
 # --------------------------------------------------
 
 def send_email(person: dict) -> tuple[bool, str]:
     """
-    Send a batch-specific confirmation email to the student.
+    Send a batch-specific confirmation email to the student
+    using the Gmail API over HTTPS (not SMTP).
 
     Returns:
         (success: bool, message: str)
     """
-    sender_email = os.getenv("SENDER_EMAIL")
-    sender_password = os.getenv("SENDER_APP_PASSWORD")
-
-    if not sender_email or not sender_password:
-        return False, "⚠️ SENDER_EMAIL or SENDER_APP_PASSWORD not set in .env"
-
     to_email = person.get("email")
     if not to_email:
         return False, "⚠️ No email address to send to"
@@ -116,29 +149,37 @@ def send_email(person: dict) -> tuple[bool, str]:
     name = person.get("name") or "Student"
 
     template = find_template(batch)
-
     if template is None:
         return False, f"⚠️ No email template found for batch: \"{batch}\""
 
-    # Build email
-    msg = MIMEMultipart()
-    msg["From"] = sender_email
-    msg["To"] = to_email
-    msg["Cc"] = template["cc"]
-    msg["Subject"] = template["subject"]
-    msg["Message-ID"] = make_msgid()  # unique ID prevents Gmail threading
-
-    body = template["body"].format(name=name)
-    msg.attach(MIMEText(body, "plain"))
-
-    recipients = [to_email, template["cc"]]
-
     try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, sender_password)
-            server.sendmail(sender_email, recipients, msg.as_string())
+        creds = _get_creds()
+        if not creds:
+            return False, "❌ Gmail credentials not available"
+
+        service = build("gmail", "v1", credentials=creds)
+
+        # Build the email message
+        msg = MIMEMultipart()
+        msg["To"] = to_email
+        msg["Cc"] = template["cc"]
+        msg["Subject"] = template["subject"]
+        msg["Message-ID"] = make_msgid()
+
+        body = template["body"].format(name=name)
+        msg.attach(MIMEText(body, "plain"))
+
+        # Encode to base64url as required by Gmail API
+        raw = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
+
+        service.users().messages().send(
+            userId="me",
+            body={"raw": raw}
+        ).execute()
 
         return True, f"📧 Email sent to {to_email}"
 
+    except HttpError as e:
+        return False, f"❌ Gmail API error: {e}"
     except Exception as e:
         return False, f"❌ Email failed: {e}"
