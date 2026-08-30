@@ -3,6 +3,7 @@
 token.json
 credentials.json
 *.json
+email_format.txt
 
 # Keep these specific JSON files safe
 !render.yaml
