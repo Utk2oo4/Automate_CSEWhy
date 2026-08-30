@@ -19,7 +19,7 @@ from telegram.ext import (
 
 from sheets import append_to_sheet
 from mailer import send_email
-from health import start_in_thread as start_health_server
+# health import removed — PTB webhook server handles the HTTP port directly
 
 # --------------------------------------------------
 # LOAD ENVIRONMENT VARIABLES
@@ -559,8 +559,14 @@ async def handle_document(
 
 def main():
 
-    # Start health check HTTP server (required for Render)
-    start_health_server()
+    # --------------------------------------------------
+    # WEBHOOK MODE (required for Render)
+    # Render sets PORT and RENDER_EXTERNAL_URL automatically.
+    # run_polling() does NOT work on Render free tier (errno 101).
+    # --------------------------------------------------
+
+    port = int(os.environ.get("PORT", 8080))
+    render_url = os.environ.get("RENDER_EXTERNAL_URL", "").rstrip("/")
 
     application = (
         Application.builder()
@@ -599,7 +605,20 @@ def main():
 
     print("🤖 Telegram bot is running...")
 
-    application.run_polling()
+    if render_url:
+        # --- Hosted on Render: use webhook ---
+        webhook_url = f"{render_url}/{TELEGRAM_BOT_TOKEN}"
+        print(f"🌐 Webhook mode: {webhook_url}")
+        application.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=TELEGRAM_BOT_TOKEN,
+            webhook_url=webhook_url,
+        )
+    else:
+        # --- Local development: use polling ---
+        print("🔄 Polling mode (local)")
+        application.run_polling()
 
 
 # --------------------------------------------------
