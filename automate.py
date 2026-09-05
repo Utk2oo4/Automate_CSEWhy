@@ -116,13 +116,14 @@ def process_extracted(user_id: int, data: dict) -> str:
         valid, incomplete = validate_people(data)
         reply = format_results(valid, incomplete)
 
-        # Append each valid record to sheet and send email
+        # Append each valid record to sheet and send email (if not duplicate)
         sheet_lines = []
         for person in valid:
             ok, msg = append_to_sheet(person)
             sheet_lines.append(msg)
-            email_ok, email_msg = send_email(person)
-            sheet_lines.append(email_msg)
+            if ok:
+                email_ok, email_msg = send_email(person)
+                sheet_lines.append(email_msg)
 
         if sheet_lines:
             reply += "\n" + "\n".join(sheet_lines)
@@ -155,8 +156,9 @@ def process_extracted(user_id: int, data: dict) -> str:
         if valid:
             ok, sheet_msg = append_to_sheet(valid[0])
             reply += f"\n{sheet_msg}"
-            email_ok, email_msg = send_email(valid[0])
-            reply += f"\n{email_msg}"
+            if ok:
+                email_ok, email_msg = send_email(valid[0])
+                reply += f"\n{email_msg}"
 
         return reply
 

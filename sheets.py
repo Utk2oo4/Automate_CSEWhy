@@ -2,6 +2,8 @@ import os
 import difflib
 import base64
 import json
+import time
+import threading
 
 import gspread
 from google.oauth2.credentials import Credentials
@@ -9,7 +11,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
 # --------------------------------------------------
-# SCOPES
+# SCOPES & RECENT INSERTION CACHE
 # --------------------------------------------------
 
 SCOPES = [
@@ -20,6 +22,32 @@ SCOPES = [
 
 CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), "credentials.json")
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), "token.json")
+
+# In-memory recent insertion cache to handle fast concurrent requests (e.g. multiple images at once)
+_RECENT_LOCK = threading.Lock()
+_RECENT_INSERTIONS: dict[tuple[str, str], float] = {}  # key: (identifier_lower, tab_title_lower), val: timestamp
+
+
+def _is_recently_inserted(identifier: str, tab_title: str) -> bool:
+    if not identifier:
+        return False
+    key = (identifier.strip().lower(), tab_title.lower())
+    now = time.time()
+    with _RECENT_LOCK:
+        # Purge entries older than 10 minutes
+        expired = [k for k, t in _RECENT_INSERTIONS.items() if now - t > 600]
+        for k in expired:
+            del _RECENT_INSERTIONS[k]
+        return key in _RECENT_INSERTIONS
+
+
+def _record_recent_insertion(identifier: str, tab_title: str):
+    if not identifier:
+        return
+    key = (identifier.strip().lower(), tab_title.lower())
+    with _RECENT_LOCK:
+        _RECENT_INSERTIONS[key] = time.time()
+
 
 # --------------------------------------------------
 # AUTHENTICATE
@@ -145,23 +173,46 @@ def append_to_sheet(person: dict) -> tuple[bool, str]:
             f"Please check the batch name."
         )
 
-    # Find the next row (last filled row + 1)
-    all_values = worksheet.get_all_values()
+    name = (person.get("name") or "Not Found").strip()
+    phone = (person.get("phone") or "").strip()
+    email = (person.get("email") or "").strip().lower()
 
-    # Determine next serial number from column A (skip header row 1)
-    data_rows = [r for r in all_values[1:] if any(r)]  # skip blank rows
+    # 1. Check in-memory recent cache (prevents duplicate processing when sending multiple images at once)
+    if email and _is_recently_inserted(email, worksheet.title):
+        return False, f"⚠️ Duplicate skipped: *{email}* was already added to *{worksheet.title}*."
+    if phone and _is_recently_inserted(phone, worksheet.title):
+        return False, f"⚠️ Duplicate skipped: Phone *{phone}* was already added to *{worksheet.title}*."
+
+    # 2. Find existing rows in worksheet & check for duplicates
+    all_values = worksheet.get_all_values()
+    data_rows = [r for r in all_values[1:] if any(r)]  # skip header (row 1) and blank rows
+
+    for r in data_rows:
+        row_phone = r[2].strip() if len(r) > 2 else ""
+        row_email = r[3].strip().lower() if len(r) > 3 else ""
+
+        if email and row_email and email == row_email:
+            _record_recent_insertion(email, worksheet.title)
+            return False, f"⚠️ Duplicate skipped: *{email}* is already in *{worksheet.title}*."
+
+        if phone and row_phone and phone == row_phone and not email:
+            _record_recent_insertion(phone, worksheet.title)
+            return False, f"⚠️ Duplicate skipped: Phone *{phone}* is already in *{worksheet.title}*."
+
     next_sn = len(data_rows) + 1
     next_row = len(data_rows) + 2  # +1 for header, +1 for next
-
-    name = person.get("name") or "Not Found"
-    phone = person.get("phone") or ""
-    email = person.get("email") or ""
 
     row_data = [next_sn, name, phone, email, batch]
 
     worksheet.insert_row(row_data, index=next_row)
 
+    if email:
+        _record_recent_insertion(email, worksheet.title)
+    if phone:
+        _record_recent_insertion(phone, worksheet.title)
+
     return True, (
         f"📊 Added to *{worksheet.title}*\n"
         f"Row {next_row} — Sn.No. {next_sn}"
     )
+

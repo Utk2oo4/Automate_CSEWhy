@@ -20,7 +20,7 @@ TEMPLATES = {
     "ai masterclass": {
         "match_keywords": ["masterclass", "ai masterclass"],
         "subject": "AI Masterclass Registration Confirmed – 12th September 2026",
-        "cc": "whycse@gmail.com",
+        "cc": "whycse2@gmail.com",
         "body": """\
 Dear Student,
 
@@ -48,7 +48,7 @@ Team CSEWhy"""
     "frontiers": {
         "match_keywords": ["frontiers", "frontier"],
         "subject": "AI Creator Fellowship- Frontiers Batch Update",
-        "cc": "whycse@gmail.com",
+        "cc": "whycse2@gmail.com",
         "body": """\
 Hello Student,
 
@@ -65,6 +65,47 @@ If you've joined any other AI Creator Fellowship WhatsApp groups, please exit th
 If you have any questions, feel free to reach out to us at 7011596808.
 
 Thanks!
+Team CSEWhy"""
+    },
+
+    "arjuna": {
+        "match_keywords": ["arjuna", "arjuna batch", "ai for upsc"],
+        "subject": "Update regarding AI for UPSC | Arjuna Batch",
+        "cc": "whycse2@gmail.com",
+        "body": """\
+Hello Student,
+
+This is to inform you that your AI for UPSC - Arjuna batch will begin from mid-September 2026.
+
+Batch Name: Arjuna
+
+WhatsApp Group: https://chat.whatsapp.com/KujS2edBFe8Anzg29TUk8X?mode=gi_t
+
+You will be given access to the course portal and other study materials soon.
+
+We’re excited to have you with us and look forward to being a part of your UPSC preparation journey. Wishing you a great and productive learning experience!
+
+Best regards."""
+    },
+
+    "reformers": {
+        "match_keywords": ["reformers", "reformer", "public policy"],
+        "subject": "Public Policy Fellowship – Reformers Batch Update",
+        "cc": "whycse2@gmail.com",
+        "body": """\
+Dear Student,
+
+This is to inform you that your Public Policy Fellowship will begin in the last week of September 2026.
+
+Whatsapp Group Link: https://chat.whatsapp.com/LlCwQFxb6yEINdppd2ZJGt?mode=gi_t
+
+You will be given access to the course portal and other study materials soon. Further details regarding the batch schedule and sessions will be shared with you soon.
+
+We’re excited to have you with us and look forward to being a part of your learning journey in public policy. Wishing you a great and productive learning experience!
+
+If you have any questions, feel free to reach out to us at 7011596808.
+
+Best regards,
 Team CSEWhy"""
     },
 }
