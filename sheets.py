@@ -75,18 +75,32 @@ def authenticate() -> gspread.Client:
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
     if not creds or not creds.valid:
+        refreshed = False
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-            # Save refreshed token back to file (local only)
-            if not token_b64 and os.path.exists(TOKEN_FILE):
+            try:
+                creds.refresh(Request())
+                refreshed = True
+                # Save refreshed token back to file (local only)
+                if not token_b64 and os.path.exists(TOKEN_FILE):
+                    with open(TOKEN_FILE, "w") as f:
+                        f.write(creds.to_json())
+            except Exception as e:
+                print(f"Warning: Token refresh failed: {e}")
+                refreshed = False
+
+        if not refreshed:
+            if token_b64:
+                raise RuntimeError(
+                    "Google OAuth token in GOOGLE_TOKEN_B64 has expired or been revoked. "
+                    "Run 'python3 generate_token.py' locally to generate a fresh token, "
+                    "and update GOOGLE_TOKEN_B64 in Render dashboard."
+                )
+            else:
+                # Browser login — only works locally
+                flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+                creds = flow.run_local_server(port=0)
                 with open(TOKEN_FILE, "w") as f:
                     f.write(creds.to_json())
-        else:
-            # Browser login — only works locally
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
-            with open(TOKEN_FILE, "w") as f:
-                f.write(creds.to_json())
 
     return gspread.authorize(creds)
 

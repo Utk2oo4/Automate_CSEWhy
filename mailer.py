@@ -166,7 +166,11 @@ def _get_creds() -> Credentials:
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
     if creds and creds.expired and creds.refresh_token:
-        creds.refresh(Request())
+        try:
+            creds.refresh(Request())
+        except Exception as e:
+            print(f"Warning: Failed to refresh Gmail credentials: {e}")
+            return None
 
     return creds
 
