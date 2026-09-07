@@ -4,6 +4,7 @@ import base64
 import json
 import time
 import threading
+import html
 
 import gspread
 from google.oauth2.credentials import Credentials
@@ -179,9 +180,9 @@ def append_to_sheet(person: dict) -> tuple[bool, str]:
 
     # 1. Check in-memory recent cache (prevents duplicate processing when sending multiple images at once)
     if email and _is_recently_inserted(email, worksheet.title):
-        return False, f"⚠️ Duplicate skipped: *{email}* was already added to *{worksheet.title}*."
+        return False, f"⚠️ Duplicate skipped: <b>{html.escape(email)}</b> was already added to <b>{html.escape(worksheet.title)}</b>."
     if phone and _is_recently_inserted(phone, worksheet.title):
-        return False, f"⚠️ Duplicate skipped: Phone *{phone}* was already added to *{worksheet.title}*."
+        return False, f"⚠️ Duplicate skipped: Phone <b>{html.escape(phone)}</b> was already added to <b>{html.escape(worksheet.title)}</b>."
 
     # 2. Find existing rows in worksheet & check for duplicates
     all_values = worksheet.get_all_values()
@@ -193,11 +194,11 @@ def append_to_sheet(person: dict) -> tuple[bool, str]:
 
         if email and row_email and email == row_email:
             _record_recent_insertion(email, worksheet.title)
-            return False, f"⚠️ Duplicate skipped: *{email}* is already in *{worksheet.title}*."
+            return False, f"⚠️ Duplicate skipped: <b>{html.escape(email)}</b> is already in <b>{html.escape(worksheet.title)}</b>."
 
         if phone and row_phone and phone == row_phone and not email:
             _record_recent_insertion(phone, worksheet.title)
-            return False, f"⚠️ Duplicate skipped: Phone *{phone}* is already in *{worksheet.title}*."
+            return False, f"⚠️ Duplicate skipped: Phone <b>{html.escape(phone)}</b> is already in <b>{html.escape(worksheet.title)}</b>."
 
     next_sn = len(data_rows) + 1
     next_row = len(data_rows) + 2  # +1 for header, +1 for next
@@ -212,7 +213,7 @@ def append_to_sheet(person: dict) -> tuple[bool, str]:
         _record_recent_insertion(phone, worksheet.title)
 
     return True, (
-        f"📊 Added to *{worksheet.title}*\n"
+        f"📊 Added to <b>{html.escape(worksheet.title)}</b>\n"
         f"Row {next_row} — Sn.No. {next_sn}"
     )
 

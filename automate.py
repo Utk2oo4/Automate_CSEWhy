@@ -2,6 +2,7 @@ import os
 import json
 import base64
 import traceback
+import html
 from io import BytesIO
 from datetime import datetime, timedelta
 
@@ -142,10 +143,10 @@ def process_extracted(user_id: int, data: dict) -> str:
         name = merged.get("name") or "Record"
         fields_str = ", ".join(still_missing)
         return (
-            f"\u23f3 Partial record saved for *{name}*.\n"
-            f"Still missing: `{fields_str}`\n\n"
+            f"⏳ Partial record saved for <b>{html.escape(name)}</b>.\n"
+            f"Still missing: <code>{html.escape(fields_str)}</code>\n\n"
             f"Send the missing info and I'll complete the record.\n"
-            f"_(Type /clear to start over)_"
+            f"<i>(Type /clear to start over)</i>"
         )
     else:
         # Complete! Clear session, write to sheet, send email, return result.
@@ -347,6 +348,32 @@ def validate_people(data):
 
 
 # --------------------------------------------------
+# SAFE REPLY HELPER
+# --------------------------------------------------
+
+async def reply_safe(update: Update, text: str, parse_mode: str = "HTML"):
+    """
+    Send a message with HTML formatting. If Telegram entity parsing fails
+    for any reason, fall back to plain text so the message is always delivered.
+    """
+    try:
+        await update.message.reply_text(text, parse_mode=parse_mode)
+    except Exception as e:
+        print(f"Warning: reply_text with parse_mode={parse_mode} failed: {e}")
+        plain_text = (
+            text.replace("<b>", "")
+            .replace("</b>", "")
+            .replace("<i>", "")
+            .replace("</i>", "")
+            .replace("<code>", "")
+            .replace("</code>", "")
+            .replace("<pre>", "")
+            .replace("</pre>", "")
+        )
+        await update.message.reply_text(plain_text, parse_mode=None)
+
+
+# --------------------------------------------------
 # FORMAT TELEGRAM RESPONSE
 # --------------------------------------------------
 
@@ -363,10 +390,10 @@ def format_results(valid, incomplete):
             name = person.get("name") or "Name not provided"
 
             message += (
-                f"{i}. {name}\n"
-                f"📱 {person['phone']}\n"
-                f"📧 {person['email']}\n"
-                f"🎓 {person['batch']}\n\n"
+                f"{i}. <b>{html.escape(name)}</b>\n"
+                f"📱 {html.escape(str(person.get('phone') or ''))}\n"
+                f"📧 {html.escape(str(person.get('email') or ''))}\n"
+                f"🎓 {html.escape(str(person.get('batch') or ''))}\n\n"
             )
 
     if incomplete:
@@ -382,8 +409,8 @@ def format_results(valid, incomplete):
             missing = ", ".join(item["missing"])
 
             message += (
-                f"{i}. {name}\n"
-                f"Missing: {missing}\n\n"
+                f"{i}. <b>{html.escape(name)}</b>\n"
+                f"Missing: <code>{html.escape(missing)}</code>\n\n"
             )
 
     if not message:
@@ -418,15 +445,16 @@ async def handle_text(
 
         message = process_extracted(user_id, data)
 
-        await update.message.reply_text(message, parse_mode="Markdown")
+        await reply_safe(update, message, parse_mode="HTML")
 
     except Exception as e:
         tb = traceback.format_exc()
         print("ERROR:", tb)
         short = tb[-800:]  # last 800 chars fits in Telegram
-        await update.message.reply_text(
-            f"❌ Error (text):\n```\n{short}\n```",
-            parse_mode="Markdown"
+        await reply_safe(
+            update,
+            f"❌ Error (text):\n<pre>{html.escape(short)}</pre>",
+            parse_mode="HTML"
         )
 
 
@@ -487,15 +515,16 @@ async def handle_image(
 
         message = process_extracted(user_id, data)
 
-        await update.message.reply_text(message, parse_mode="Markdown")
+        await reply_safe(update, message, parse_mode="HTML")
 
     except Exception as e:
         tb = traceback.format_exc()
         print("ERROR:", tb)
         short = tb[-800:]
-        await update.message.reply_text(
-            f"❌ Error (image):\n```\n{short}\n```",
-            parse_mode="Markdown"
+        await reply_safe(
+            update,
+            f"❌ Error (image):\n<pre>{html.escape(short)}</pre>",
+            parse_mode="HTML"
         )
 
 
@@ -547,15 +576,16 @@ async def handle_document(
 
         message = process_extracted(user_id, data)
 
-        await update.message.reply_text(message, parse_mode="Markdown")
+        await reply_safe(update, message, parse_mode="HTML")
 
     except Exception as e:
         tb = traceback.format_exc()
         print("ERROR:", tb)
         short = tb[-800:]
-        await update.message.reply_text(
-            f"❌ Error (doc):\n```\n{short}\n```",
-            parse_mode="Markdown"
+        await reply_safe(
+            update,
+            f"❌ Error (doc):\n<pre>{html.escape(short)}</pre>",
+            parse_mode="HTML"
         )
 
 

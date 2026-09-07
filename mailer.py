@@ -2,6 +2,7 @@ import os
 import base64
 import difflib
 import json
+import html
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.utils import make_msgid
@@ -191,7 +192,7 @@ def send_email(person: dict) -> tuple[bool, str]:
 
     template = find_template(batch)
     if template is None:
-        return False, f"⚠️ No email template found for batch: \"{batch}\""
+        return False, f"⚠️ No email template found for batch: \"{html.escape(batch)}\""
 
     try:
         creds = _get_creds()
@@ -218,7 +219,7 @@ def send_email(person: dict) -> tuple[bool, str]:
             body={"raw": raw}
         ).execute()
 
-        return True, f"📧 Email sent to {to_email}"
+        return True, f"📧 Email sent to {html.escape(to_email)}"
 
     except HttpError as e:
         return False, f"❌ Gmail API error: {e}"
