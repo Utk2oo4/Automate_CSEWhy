@@ -20,7 +20,7 @@ from google.auth.transport.requests import Request
 TEMPLATES = {
     "ai masterclass": {
         "match_keywords": ["masterclass", "ai masterclass"],
-        "subject": "AI Masterclass Registration Confirmed – 12th September 2026",
+        "subject": "AI Masterclass Registration Confirmed – 3rd October 2026",
         "cc": "whycse2@gmail.com",
         "body": """\
 Dear Student,
@@ -29,11 +29,10 @@ Thank you for registering for the AI Masterclass with CSEWhy.
 
 Your registration has been confirmed.
 
-Date: 12th September 2026
-Time: 5:00 PM
+Date: 3rd October 2026
 Mode: Live Online
 
-WhatsApp Community: https://chat.whatsapp.com/GkqxHBpuAa2KDa7RP11BI4?s=sw&p=i&ilr=2
+WhatsApp Community: https://chat.whatsapp.com/IAeMyPyibiI83O9WddwHdd?mode=gi_t
 
 Please join the WhatsApp community for all updates regarding the masterclass. \
 We'll also share the joining link and other details there before the session.
@@ -41,7 +40,6 @@ We'll also share the joining link and other details there before the session.
 If you have any questions, feel free to reply to this email or contact us at 7011596808.
 
 See you in the masterclass!
-
 
 Team CSEWhy"""
     },

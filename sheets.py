@@ -112,7 +112,7 @@ def authenticate() -> gspread.Client:
 # When a batch keyword matches multiple tabs, prefer the tab containing this fragment.
 # Key = substring of batch name (lowercase), Value = substring of preferred tab name (lowercase)
 TAB_OVERRIDES = {
-    "masterclass": "12 sep",
+    "masterclass": "3 oct",
 }
 
 
